@@ -1,36 +1,46 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
-  // Fetch the entire National Defense Picture
-  const state = await prisma.defenseState.findFirst({
-    orderBy: { updatedAt: 'desc' },
-    include: {
-      cyberIncidents: { where: { status: 'ACTIVE' } },
-      infraNodes: { where: { status: { not: 'ONLINE' } } },
-      fieldUnits: { where: { status: 'DEPLOYED' } }
-    }
-  });
+// CRITICAL FIX: Forces this route to run only on request, not at build time.
+export const dynamic = 'force-dynamic';
 
-  return NextResponse.json({ 
-    status: "SECURE_CONNECTION_ESTABLISHED",
-    data: state 
-  });
+export async function GET() {
+  try {
+    const state = await prisma.defenseState.findFirst({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        cyberIncidents: { where: { status: 'ACTIVE' } },
+        infraNodes: { where: { status: { not: 'ONLINE' } } },
+        fieldUnits: { where: { status: 'DEPLOYED' } }
+      }
+    });
+
+    return NextResponse.json({ 
+      status: "SECURE_CONNECTION_ESTABLISHED",
+      data: state || { status: "SYSTEM_INITIALIZING" } // Fallback if DB is empty
+    });
+  } catch (error) {
+    console.error("NROS READ ERROR:", error);
+    return NextResponse.json({ status: "DB_CONNECTION_ERROR" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { action, target, actor } = body;
+  try {
+    const body = await req.json();
+    const { action, target, actor } = body;
 
-  // Log command in the Secure Audit Log
-  await prisma.secureLog.create({
-    data: {
-      action: action,
-      actor: actor || "UNKNOWN",
-      module: "COMMAND",
-      metadata: JSON.stringify(target)
-    }
-  });
+    await prisma.secureLog.create({
+      data: {
+        action: action,
+        actor: actor || "UNKNOWN",
+        module: "COMMAND",
+        metadata: JSON.stringify(target)
+      }
+    });
 
-  return NextResponse.json({ success: true, msg: "COMMAND AUTHENTICATED & LOGGED" });
+    return NextResponse.json({ success: true, msg: "COMMAND AUTHENTICATED & LOGGED" });
+  } catch (error) {
+    return NextResponse.json({ error: "WRITE_FAILED" }, { status: 500 });
+  }
 }
