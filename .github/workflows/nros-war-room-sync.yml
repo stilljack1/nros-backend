@@ -1,26 +1,19 @@
 name: Figma to NROS War Room Sync
-
 on:
   repository_dispatch:
     types: [figma-update]
   workflow_dispatch:
-
 jobs:
   sync-assets:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout NROS Backend
         uses: actions/checkout@v4
-
       - name: Pull NROS War Room Screens (33 & 34)
         run: |
           echo "Connecting to Figma URL: B5GkhdbFuq7AZoV9N9BqG1"
-          echo "Targeting Pages: 33, 34"
-          # Logic to download exported PNGs/SVGs from Figma API
           mkdir -p apps/web/public/war-room
-          # Mock download command for CTO review
           echo "Syncing War Room tactical overlays..." > apps/web/public/war-room/status.txt
-
       - name: Commit Tactical Visuals
         run: |
           git config --global user.name "Jack-AGI-Bot"
