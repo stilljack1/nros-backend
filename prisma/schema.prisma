@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("NROS_DATABASE_URL") 
+}
+
+// NOTE: This DB is completely separate from Jack/Julia's DB.
+
+// --- CORE: NATIONAL SECURITY STATE ---
+model DefenseState {
+  id             String   @id @default(uuid())
+  updatedAt      DateTime @updatedAt
+  defcon         Int      @default(5)
+  threatLevel    String   // "LOW", "ELEVATED", "CRITICAL"
+  nationalAlert  String   // "GREEN", "RED", "BLACK"
+  
+  // Relations
+  cyberIncidents CyberIncident[]
+  infraNodes     InfraNode[]
+  fieldUnits     FieldUnit[]
+}
+
+// --- MODULE: CYBER SECURITY ---
+model CyberIncident {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  vector      String   // "DDoS", "Malware", "Phishing"
+  target      String   // "Grid", "Banking", "MilNet"
+  origin      String?
+  status      String   // "ACTIVE", "CONTAINED"
+  severity    Int      // 1-10
+  
+  defenseStateId String?
+  defenseState   DefenseState? @relation(fields: [defenseStateId], references: [id])
+}
+
+// --- MODULE: INFRASTRUCTURE RESILIENCE ---
+model InfraNode {
+  id          String   @id @default(uuid())
+  sector      String   // "ENERGY", "WATER", "TRANSPORT"
+  name        String
+  status      String   // "ONLINE", "DEGRADED", "OFFLINE"
+  protection  Int      // 0-100 (Shield Integrity)
+  lat         Float?
+  lng         Float?
+
+  defenseStateId String?
+  defenseState   DefenseState? @relation(fields: [defenseStateId], references: [id])
+}
+
+// --- MODULE: FIELD OPERATIONS (DISASTER) ---
+model FieldUnit {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // "FEMA", "GUARD", "MEDIC"
+  status      String   // "STATIONED", "DEPLOYED"
+  location    String
+  resources   Int      // 0-100
+
+  defenseStateId String?
+  defenseState   DefenseState? @relation(fields: [defenseStateId], references: [id])
+}
+
+// --- MODULE: SECURE AUDIT LOG (IMMUTABLE) ---
+model SecureLog {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  action    String
+  actor     String   // "Jack", "Julia", "System"
+  module    String
+  metadata  String?  // JSON string
+}
